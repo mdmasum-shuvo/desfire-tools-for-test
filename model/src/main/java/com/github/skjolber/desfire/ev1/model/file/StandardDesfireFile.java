@@ -43,6 +43,7 @@ public class StandardDesfireFile extends DesfireFile implements Parcelable {
     	if(size > 0) {
     		data = new byte[size];
     		source.readByteArray(data);
+
     	} else {
     		data = null;
     	}

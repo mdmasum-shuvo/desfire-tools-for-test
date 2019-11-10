@@ -9,8 +9,15 @@
     tools:context=".MainActivity"
     android:background="@color/white"
     android:orientation="vertical"
-     android:id="@+id/rootLayout"
      >
+
+	<TextView
+		android:id="@+id/tv_text"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+        android:textSize="25dp"
+		android:layout_margin="15dp"
+		android:text=""/>
 
     <FrameLayout 
         android:id="@+id/content"
@@ -18,6 +25,7 @@
     	android:layout_height="0dp"
     	android:layout_weight="1"
     	android:background="@color/white"
+		android:visibility="gone"
         />
     <!-- 
     <fragment android:id="@+id/fragment_container"/>
