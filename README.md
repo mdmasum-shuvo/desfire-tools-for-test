@@ -34,7 +34,7 @@ See the example application.
 [issue-tracker]:       		            https://github.com/skjolber/desfire-tools-for-android/issues
 [Modified BSD License (3-clause BSD)]:  nfcjlib/LICENSE
 [LGPL 3.0 with classpath exception]:    libfreefare/LICENSE
-[Mifare Desfire Tool]:          		https://play.google.com/store/apps/details?id=com.skjolberg.mifare.desfiretool&hl=no
+[Mifare Desfire Tool]:          		https://play.google.com/store/apps/details?id=desfiretooltest&hl=no
 [TapLinx]:                              https://www.mifare.net/en/products/tools/taplinx/
 [MIFARE DESFire EV1]:                   https://en.wikipedia.org/wiki/MIFARE#MIFARE_DESFire_EV1_(previously_called_DESFire8)
 [libfreefare]:                          https://github.com/nfc-tools/libfreefare

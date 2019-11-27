@@ -1,4 +1,4 @@
-package com.skjolberg.mifare.desfiretool.filelist;
+package com.skjolberg.mifare.desfiretooltest.filelist;
 
 import com.github.skjolber.desfire.ev1.model.file.DesfireFile;
 import com.github.skjolber.desfire.ev1.model.file.StandardDesfireFile;

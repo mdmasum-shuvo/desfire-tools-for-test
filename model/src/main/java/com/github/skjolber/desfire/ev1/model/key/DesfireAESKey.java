@@ -10,7 +10,7 @@ import java.io.IOException;
 public class DesfireAESKey extends DesfireKey {
 
 	public static DesfireAESKey defaultVersionNull = new DesfireAESKey("AES null", 0x01, new byte[16]);
-	public static DesfireAESKey defaultVersion42 = new DesfireAESKey("Default AES", 0x42, new byte[]{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
+	public static DesfireAESKey defaultVersion42 = new DesfireAESKey("Default AES", 00, new byte[]{(byte) 0xE3, (byte) 0xB7, 0x15, 0x58, (byte) 0xE2, (byte) 0xBF, 0x79, 0x1C, 0x5D, 0x03, (byte) 0xF5, 0x05, 0x36, 0x7B, 0x38, (byte) 0xD4});
 	
 	public DesfireAESKey(String name, int version, byte[] value) {
 		this();

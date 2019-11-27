@@ -1,6 +1,6 @@
-package com.skjolberg.mifare.desfiretool;
+package com.skjolberg.mifare.desfiretooltest;
 
-import com.skjolberg.mifare.desfiretool.keys.DataSource;
+import com.skjolberg.mifare.desfiretooltest.keys.DataSource;
 
 import android.app.Application;
 

@@ -1,48 +1,25 @@
-package com.skjolberg.mifare.desfiretool;
+package com.skjolberg.mifare.desfiretooltest;
 
 import static com.github.skjolber.desfire.libfreefare.MifareDesfire.*;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.FragmentManager;
-import android.app.FragmentTransaction;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.nfc.NfcAdapter;
-import android.nfc.NfcAdapter.ReaderCallback;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -56,7 +33,6 @@ import com.github.skjolber.desfire.ev1.model.command.DefaultIsoDepAdapter;
 import com.github.skjolber.desfire.ev1.model.command.DefaultIsoDepWrapper;
 import com.github.skjolber.desfire.ev1.model.command.Utils;
 import com.github.skjolber.desfire.ev1.model.file.DesfireFile;
-import com.github.skjolber.desfire.ev1.model.file.DesfireFileCommunicationSettings;
 import com.github.skjolber.desfire.ev1.model.file.RecordDesfireFile;
 import com.github.skjolber.desfire.ev1.model.file.StandardDesfireFile;
 import com.github.skjolber.desfire.ev1.model.file.ValueDesfireFile;
@@ -67,39 +43,22 @@ import com.github.skjolber.desfire.ev1.model.key.DesfireDESKey;
 import com.github.skjolber.desfire.ev1.model.key.DesfireKey;
 import com.github.skjolber.desfire.ev1.model.key.DesfireKeyType;
 import com.github.skjolber.desfire.libfreefare.MifareDESFireKey;
-import com.github.skjolber.desfire.libfreefare.MifareDesfire;
 import com.github.skjolber.desfire.libfreefare.MifareDesfireKey;
 import com.github.skjolber.desfire.libfreefare.MifareTag;
-import com.skjolberg.mifare.desfiretool.FileSaveFragment.Callbacks;
-import com.skjolberg.mifare.desfiretool.filelist.ApplicationDetail;
-import com.skjolberg.mifare.desfiretool.filelist.ApplicationDetailApplicationKey;
-import com.skjolberg.mifare.desfiretool.filelist.ApplicationDetailFile;
-import com.skjolberg.mifare.desfiretool.filelist.ApplicationDetailKey;
-import com.skjolberg.mifare.desfiretool.filelist.ApplicationDetailRecord;
-import com.skjolberg.mifare.desfiretool.keys.DataSource;
+
+import com.skjolberg.mifare.desfiretooltest.filelist.ApplicationDetailFile;
+
+import com.skjolberg.mifare.desfiretooltest.keys.DataSource;
 
 @SuppressLint("ResourceAsColor")
-public class MainActivity extends Activity implements ReaderCallback, FragmentManager.OnBackStackChangedListener, Callbacks {
+public class MainActivity extends Activity implements NfcAdapter.ReaderCallback {
 
     private static final String ACTION_NFC_SETTINGS = "android.settings.NFC_SETTINGS";
     TextView textView;
-    /**
-     * this action seems never to be emitted, but is here for future use
-     */
-    private static final String ACTION_TAG_LEFT_FIELD = "android.nfc.action.TAG_LOST";
-
-    public static byte[] key_data_aes = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-    public static final byte key_data_aes_version = 0x42;
-
     private static final String TAG = MainActivity.class.getName();
 
     private interface OnKeyListener {
         void onKey(DesfireKey key);
-    }
-
-    private interface OnKeyNumberListener {
-        void onKeyNumber(int index, String access);
     }
 
     private NfcAdapter nfcAdapter;
@@ -112,22 +71,14 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
     private MifareTag tag;
     private DesfireTag desfireTag;
     private DefaultIsoDepAdapter defaultIsoDepAdapter;
-
-    protected AlertDialog alertDialog;
-
-    protected Callbacks callbacks;
-
-    protected BroadcastReceiver nfcStateChangeBroadcastReceiver;
-
     private TagPresenceScanner tagPresenceScanner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        textView = findViewById(R.id.tvNfcData);
 
-        getFragmentManager().addOnBackStackChangedListener(this);
-        textView = findViewById(R.id.tv_text);
         // Check for available NFC Adapter
         PackageManager pm = getPackageManager();
         if (pm.hasSystemFeature(PackageManager.FEATURE_NFC) && NfcAdapter.getDefaultAdapter(this) != null) {
@@ -137,10 +88,8 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
             if (!nfcAdapter.isEnabled()) {
                 startNfcSettingsActivity();
 
-                showToast(R.string.nfcNotEnabledMessage);
             }
 
-            showMainFragment();
 
             tagPresenceScanner = new TagPresenceScanner(this);
         } else {
@@ -169,12 +118,13 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
         tagPresenceScanner.pause();
     }
 
+
+
+
     @Override
     public void onTagDiscovered(Tag nfc) {
         IsoDep isoDep = IsoDep.get(nfc);
 
-        FragmentManager fragmentManager = getFragmentManager();
-        fragmentManager.popBackStack("main", 0);
 
         DefaultIsoDepWrapper isoDepWrapper = new DefaultIsoDepWrapper(isoDep);
 
@@ -237,20 +187,7 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
 
     @Override
     public void onBackPressed() {
-        FragmentManager fragmentManager = getFragmentManager();
-
-        int count = fragmentManager.getBackStackEntryCount();
-        Log.d(TAG, "onBackPressed " + count);
-        if (count == 1) {
-            this.finish();
-        } else {
-            if (count == 2) {
-
-            }
-            fragmentManager.popBackStack();
-        }
-
-
+        super.onBackPressed();
     }
 
 
@@ -412,25 +349,12 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
     }
 
     protected void onTagLost() {
-        showShortToast(R.string.tagStatusLost);
 
-    }
+            Toast.makeText(this, "tag lost", Toast.LENGTH_SHORT).show();
 
-    private void showMainFragment() {
-        Log.d(TAG, "showMainFragment");
 
-        // Create new fragment and transaction
-        final MainFragment newFragment = new MainFragment();
+        //showShortToast(R.string.tagStatusLost);
 
-        FragmentTransaction transaction = getFragmentManager().beginTransaction();
-
-        // Replace whatever is in the fragment_container view with this fragment,
-        // and add the transaction to the back stack
-        transaction.replace(R.id.content, newFragment, "main");
-        transaction.addToBackStack("main");
-
-        // Commit the transaction
-        transaction.commit();
     }
 
 
@@ -447,7 +371,6 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
         if (desfireFile.isContent()) {
             Log.d(TAG, "Already read file content");
 
-            showFileFragment(desfireFile);
 
             return;
         }
@@ -479,7 +402,6 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
                         readFile(desfireFile);
                     }
 
-                    showFileFragment(desfireFile);
 
                     return;
                 }
@@ -508,7 +430,6 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
                         readFile(desfireFile);
                     }
 
-                    showFileFragment(desfireFile);
 
                     showToast(R.string.applicationAuthenticatedSuccess);
                 } else {
@@ -526,28 +447,12 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
             try {
                 readFile(desfireFile);
 
-                showFileFragment(desfireFile);
             } catch (Exception e) {
                 Log.d(TAG, "Problem reading file", e);
             }
 
         }
 
-    }
-
-    private String getName(DesfireKeyType type) {
-        switch (type) {
-            case TDES:
-                return getString(R.string.applicationAuthenticateKey3DES);
-            case TKTDES:
-                return getString(R.string.applicationAuthenticateKey3K3DES);
-            case AES:
-                return getString(R.string.applicationAuthenticateKeyAES);
-            case DES:
-                return getString(R.string.applicationAuthenticateKeyDES);
-            default:
-                throw new IllegalArgumentException();
-        }
     }
 
 
@@ -559,135 +464,6 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
         return true;
     }
 
-    @Override
-    public boolean onPrepareOptionsMenu(Menu menu) {
-        for (int i = 0; i < menu.size(); i++) {
-            menu.getItem(i).setVisible(false);
-        }
-
-        MenuItem keys = menu.findItem(R.id.action_settings);
-        MenuItem addKey = menu.findItem(R.id.action_add);
-        MenuItem save = menu.findItem(R.id.action_save);
-
-        FragmentManager fragmentManager = getFragmentManager();
-
-        String name = fragmentManager.getBackStackEntryAt(fragmentManager.getBackStackEntryCount() - 1).getName();
-        if (name != null && name.equals("keys")) {
-            keys.setVisible(false);
-            addKey.setVisible(true);
-        } else {
-            keys.setVisible(true);
-            addKey.setVisible(false);
-        }
-
-        Log.d(TAG, "Prepare options menu for " + name);
-        if (name != null && name.equals("file")) {
-            getFragmentManager().executePendingTransactions();
-
-            FileFragment fragment = (FileFragment) fragmentManager.findFragmentByTag("file");
-
-            DesfireFile file = fragment.getFile();
-
-            if (file instanceof ValueDesfireFile) {
-                save.setVisible(false);
-            } else {
-                save.setVisible(file.isContent());
-            }
-        } else {
-            save.setVisible(false);
-        }
-
-        return super.onPrepareOptionsMenu(menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-
-            case R.id.action_settings: {
-                showKeysFragment();
-                return true;
-            }
-
-            case R.id.action_add: {
-                addKey();
-                return true;
-            }
-
-            case R.id.action_save: {
-                saveFileData();
-                return true;
-            }
-
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }
-
-    private void addKey() {
-        KeyListFragment fragment = (KeyListFragment) getFragmentManager().findFragmentByTag("keys");
-
-        fragment.showAddKey(null);
-
-    }
-
-    private void saveFileData() {
-        String fragTag = "saveFileData";
-
-        // Get an instance supplying a default extension, captions and
-        // icon appropriate to the calling application/activity.
-        FileSaveFragment fsf = FileSaveFragment.newInstance("bin",
-                R.string.fileSaveDialogOk,
-                R.string.fileSaveDialogCancel,
-                R.string.fileSaveDialogSaveAs,
-                R.string.fileSaveDialogHintFilenameUnadorned,
-                android.R.drawable.ic_menu_save);
-        fsf.show(getFragmentManager(), fragTag);
-
-        this.callbacks = new FileCallbacks();
-    }
-
-    private void showKeysFragment() {
-        Log.d(TAG, "showKeysFragment");
-
-        // Create new fragment and transaction
-        final KeyListFragment newFragment = new KeyListFragment();
-        newFragment.setContext(this);
-
-        newFragment.setOnItemClickListener(new OnItemClickListener() {
-
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Log.d(TAG, "onItemClick " + position + " for " + id);
-
-                ApplicationDetail applicationDetail = newFragment.getApplicationDetail(position);
-
-                if (applicationDetail instanceof ApplicationDetailKey) {
-                    ApplicationDetailKey key = (ApplicationDetailKey) applicationDetail;
-
-                    DesfireKey desfire = key.getKey();
-
-                    Log.d(TAG, "Show details for key " + desfire);
-
-                    KeyListFragment fragment = (KeyListFragment) getFragmentManager().findFragmentByTag("keys");
-
-                    fragment.showAddKey(desfire);
-
-                }
-
-            }
-
-        });
-        FragmentTransaction transaction = getFragmentManager().beginTransaction();
-
-        // Replace whatever is in the fragment_container view with this fragment,
-        // and add the transaction to the back stack
-        transaction.replace(R.id.content, newFragment, "keys");
-        transaction.addToBackStack("keys");
-
-        // Commit the transaction
-        transaction.commit();
-    }
 
     private boolean authenticate(DesfireApplicationKey desfireApplicationKey) throws Exception {
 
@@ -777,66 +553,6 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
         return false;
     }
 
-    private void showKeyNumber(DesfireFile desfireFile, final OnKeyNumberListener listener) {
-
-        final Map<Integer, String> compactPermissionMap = desfireFile.getCompactPermissionMap();
-
-        final List<Integer> keyNumbers = new ArrayList<>(compactPermissionMap.keySet());
-        Collections.sort(keyNumbers);
-
-        List<String> keys = new ArrayList<>();
-
-        for (int i = 0; i < keyNumbers.size(); i++) {
-            Integer keyNumber = keyNumbers.get(i);
-            if (keyNumber == 14) {
-                continue;
-            }
-            String access = compactPermissionMap.get(keyNumber);
-            StringBuffer buffer = new StringBuffer();
-            if (access.contains("R")) {
-                buffer.append(getString(R.string.fileAccessKeyRead));
-            }
-            if (access.contains("W")) {
-                if (buffer.length() > 0) {
-                    buffer.append(", ");
-                }
-                buffer.append(getString(R.string.fileAccessKeyWrite));
-            }
-            if (access.contains("C")) {
-                if (buffer.length() > 0) {
-                    buffer.append(", ");
-                }
-                buffer.append(getString(R.string.fileAccessKeyChange));
-            }
-
-            keys.add(getString(R.string.fileAccessKey, keyNumber, buffer.toString()));
-        }
-
-        String names[] = keys.toArray(new String[keys.size()]);
-
-        AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this);
-        LayoutInflater inflater = getLayoutInflater();
-        View convertView = (View) inflater.inflate(R.layout.dialog_list, null);
-        alertDialog.setView(convertView);
-
-        alertDialog.setTitle(getString(R.string.fileAccessSelectKey));
-        ListView lv = (ListView) convertView.findViewById(R.id.listView);
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, names);
-        lv.setAdapter(adapter);
-        final AlertDialog show = alertDialog.show();
-
-        lv.setOnItemClickListener(new OnItemClickListener() {
-
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                show.dismiss();
-
-                Integer keyNumber = keyNumbers.get(position);
-
-                listener.onKeyNumber(keyNumber, compactPermissionMap.get(keyNumber));
-            }
-        });
-    }
 
     private void showKeySelector(DesfireKeyType type, final OnKeyListener listener) {
         MainApplication application = MainApplication.getInstance();
@@ -853,37 +569,7 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
             keys = dataSource.getKeys(type);
         }
 
-        if (!keys.isEmpty()) {
-            String names[] = new String[keys.size()];
-            for (int i = 0; i < names.length; i++) {
-                names[i] = getString(R.string.applicationAuthenticateKeyNameVersion, keys.get(i).getName(), keys.get(i).getVersionAsHexString());
-            }
-            AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this);
-            LayoutInflater inflater = getLayoutInflater();
-            View convertView = (View) inflater.inflate(R.layout.dialog_list, null);
-            alertDialog.setView(convertView);
 
-            alertDialog.setTitle(getString(R.string.applicationAuthenticateKey, getName(type)));
-            ListView lv = (ListView) convertView.findViewById(R.id.listView);
-            ArrayAdapter<String> adapter = new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, names);
-            lv.setAdapter(adapter);
-            final AlertDialog show = alertDialog.show();
-
-            lv.setOnItemClickListener(new OnItemClickListener() {
-
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    show.dismiss();
-
-                    DesfireKey key = keys.get(position);
-
-                    listener.onKey(key);
-                }
-
-            });
-        } else {
-            Log.d(TAG, "No " + type + " keys found");
-        }
     }
 
     private DesfireKey desfireKey(DesfireKeyType type) {
@@ -929,157 +615,12 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
         Toast.makeText(getApplicationContext(), getString(resource), Toast.LENGTH_SHORT).show();
     }
 
-    private void showFileFragment(DesfireFile file) {
-        Log.d(TAG, "showFileFragment");
-
-        // Create new fragment and transaction
-        final FileFragment newFragment = new FileFragment();
-        newFragment.setFile(file);
-
-        newFragment.setOnItemClickListener(new OnItemClickListener() {
-
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Log.d(TAG, "onItemClick " + position + " for " + id);
-
-                ApplicationDetail applicationDetail = newFragment.getApplicationDetail(position);
-
-                if (applicationDetail instanceof ApplicationDetailRecord) {
-                    ApplicationDetailRecord key = (ApplicationDetailRecord) applicationDetail;
-
-                    byte[] content = key.getContent();
-
-                    Log.d(TAG, "Save " + Utils.getHexString(content));
-                }
-
-            }
-
-        });
-        FragmentTransaction transaction = getFragmentManager().beginTransaction();
-
-        // Replace whatever is in the fragment_container view with this fragment,
-        // and add the transaction to the back stack
-        transaction.replace(R.id.content, newFragment, "file");
-        transaction.addToBackStack("file");
-
-        // Commit the transaction
-        transaction.commit();
-    }
 
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
     }
 
-    @Override
-    public void onBackStackChanged() {
-        invalidateOptionsMenu();
-    }
-
-    private class FileCallbacks implements Callbacks {
-
-        @Override
-        public boolean onCanSave(String absolutePath, String fileName) {
-            return absolutePath != null && absolutePath.length() > 0 && fileName != null && fileName.length() > 0;
-        }
-
-        @Override
-        public void onConfirmSave(String absolutePath, String fileName) {
-            if (absolutePath == null || absolutePath.length() == 0 || fileName == null || fileName.length() == 0) {
-                getFragmentManager().popBackStack();
-
-
-                return;
-            }
-
-
-            FileFragment fragment = (FileFragment) getFragmentManager().findFragmentByTag("file");
-
-            DesfireFile file = fragment.getFile();
-
-            if (file instanceof ValueDesfireFile) {
-                throw new IllegalArgumentException();
-            }
-
-            byte[] data;
-            if (file instanceof StandardDesfireFile) {
-                StandardDesfireFile standardDesfireFile = (StandardDesfireFile) file;
-                data = standardDesfireFile.getData();
-            } else if (file instanceof RecordDesfireFile) {
-                RecordDesfireFile recordDesfireFile = (RecordDesfireFile) file;
-                data = recordDesfireFile.getRecords();
-            } else {
-                throw new IllegalArgumentException();
-            }
-
-
-            FileOutputStream out = null;
-            try {
-                File outputFile = new File(absolutePath, fileName);
-
-                if (outputFile.exists()) {
-                    if (!outputFile.delete()) {
-                        Log.d(TAG, "Unable to delete file " + outputFile);
-
-                        return;
-                    }
-                }
-
-                out = new FileOutputStream(outputFile);
-                out.write(data);
-
-                out.flush();
-
-                Log.d(TAG, "Saved file " + file);
-
-                Toast.makeText(getApplicationContext(), getString(R.string.fileSavedSuccess, outputFile.toString()), Toast.LENGTH_LONG).show();
-            } catch (IOException e) {
-                Log.d(TAG, "Problem saving file " + absolutePath + " " + fileName);
-
-                Toast.makeText(getApplicationContext(), getString(R.string.fileSavedFailure), Toast.LENGTH_LONG).show();
-
-            } finally {
-                if (out != null) {
-                    try {
-                        out.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                }
-            }
-            getFragmentManager().popBackStack();
-
-
-        }
-    }
-
-
-    public void show(AlertDialog altertDialog) {
-        synchronized (this) {
-            if (alertDialog != null) {
-                alertDialog.cancel();
-            }
-            // create alert dialog
-            this.alertDialog = altertDialog;
-
-            runOnUiThread(new Runnable() {
-                public void run() {
-                    // show it
-                    alertDialog.show();
-                }
-            });
-
-        }
-    }
-
-    public void hideDialog() {
-        synchronized (this) {
-            if (alertDialog != null) {
-                alertDialog.cancel();
-                alertDialog = null;
-            }
-        }
-    }
 
     private void readFile(final DesfireFile desfireFile) {
 
@@ -1116,7 +657,7 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
                             textView.setText(builder.toString());
                         }
                     });
-                   // standardDesfireFile.setData(data);
+                    // standardDesfireFile.setData(data);
                 }
             } catch (Exception e) {
                 Log.d(TAG, "Problem reading file", e);
@@ -1156,17 +697,6 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
         }
     }
 
-    @Override
-    public boolean onCanSave(String absolutePath, String fileName) {
-        return callbacks.onCanSave(absolutePath, fileName);
-    }
-
-    @Override
-    public void onConfirmSave(String absolutePath, String fileName) {
-        callbacks.onConfirmSave(absolutePath, fileName);
-
-        this.callbacks = null;
-    }
 
     private boolean isConnected() {
         MifareTag tag = this.tag;
@@ -1209,6 +739,7 @@ public class MainActivity extends Activity implements ReaderCallback, FragmentMa
                 }
             }
         }
+
 
         public void resumeDelayed() {
             synchronized (this) {
